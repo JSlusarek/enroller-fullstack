@@ -6,10 +6,16 @@ export default function MeetingsPage() {
     const [meetings, setMeetings] = useState([]);
     const [editedId, setEditedId] = useState(null);
 
-    function handleNewMeeting(meeting) {
-        const nextMeetings = [...meetings, { ...meeting, id: crypto.randomUUID() }];
-        setMeetings(nextMeetings);
-
+    async function handleNewMeeting(meeting) {
+        const response = await fetch('/api/meetings', {
+            method: 'POST',
+            body: JSON.stringify(meeting),
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+            const savedMeeting = await response.json();
+            setMeetings(prev => [...prev, savedMeeting]);
+        }
     }
     function onDelete(meetingToRemove) {
         setMeetings(prev => prev.filter(meeting => meeting.id !== meetingToRemove.id));
