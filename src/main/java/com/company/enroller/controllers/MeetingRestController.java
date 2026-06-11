@@ -52,8 +52,54 @@ public class MeetingRestController {
         if (meeting == null) {
             return new ResponseEntity(HttpStatus.NOT_FOUND);
         }
+        if (!meeting.getParticipants().isEmpty()) {
+            return new ResponseEntity<>("Cannot delete meeting with enrolled participants", HttpStatus.CONFLICT);
+        }
         meetingService.delete(meeting);
         return new ResponseEntity<Meeting>(meeting, HttpStatus.NO_CONTENT);
+    }
+
+    @RequestMapping(value = "/{id}/participants", method = RequestMethod.POST)
+    public ResponseEntity<?> addParticipant(@PathVariable("id") long id, @RequestBody Map<String, String> body) {
+        Meeting meeting = meetingService.findById(id);
+        if (meeting == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        String login = body.get("login");
+        if (login == null || login.trim().isEmpty()) {
+            return new ResponseEntity<>("Login is required", HttpStatus.BAD_REQUEST);
+        }
+        login = login.trim();
+        Participant participant = participantService.findByLogin(login);
+        if (participant == null) {
+            participant = new Participant();
+            participant.setLogin(login);
+            participant.setPassword("");
+            participantService.add(participant);
+        }
+        for (Participant p : meeting.getParticipants()) {
+            if (p.getLogin().equals(login)) {
+                return new ResponseEntity<>("Participant already enrolled", HttpStatus.CONFLICT);
+            }
+        }
+        meeting.addParticipant(participant);
+        meetingService.update(meeting);
+        return new ResponseEntity<>(meetingService.findById(id), HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/{id}/participants", method = RequestMethod.DELETE)
+    public ResponseEntity<?> removeParticipant(@PathVariable("id") long id, @RequestParam("login") String login) {
+        Meeting meeting = meetingService.findById(id);
+        if (meeting == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        Participant participant = participantService.findByLogin(login);
+        if (participant == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        meeting.removeParticipant(participant);
+        meetingService.update(meeting);
+        return new ResponseEntity<>(meetingService.findById(id), HttpStatus.OK);
     }
 
     @RequestMapping(value = "", method = RequestMethod.POST)
@@ -72,8 +118,17 @@ public class MeetingRestController {
         if (currentMeeting == null) {
             return new ResponseEntity(HttpStatus.NOT_FOUND);
         }
-        meeting.setId(currentMeeting.getId());
-        meetingService.update(meeting);
-        return new ResponseEntity<>(HttpStatus.OK);
+        currentMeeting.setTitle(meeting.getTitle());
+        currentMeeting.setDescription(meeting.getDescription());
+        if (meeting.getDate() != null) {
+            currentMeeting.setDate(meeting.getDate());
+        }
+        Meeting updated = meetingService.updateAndFetch(currentMeeting);
+        return new ResponseEntity<>(updated, HttpStatus.OK);
+    }
+    @RequestMapping(value = "", method = RequestMethod.DELETE)
+    public ResponseEntity<?> deleteAllMeetings() {
+        meetingService.deleteAll();
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

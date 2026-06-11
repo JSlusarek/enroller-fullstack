@@ -3,6 +3,7 @@ package com.company.enroller.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import javax.persistence.CascadeType;
+import javax.persistence.FetchType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -33,7 +34,7 @@ public class Meeting {
     @Column
     private String date;
 
-    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "meeting_participant", joinColumns = {@JoinColumn(name = "meeting_id")}, inverseJoinColumns = {
             @JoinColumn(name = "participant_login")})
     Set<Participant> participants = new HashSet<>();
@@ -80,5 +81,9 @@ public class Meeting {
 
     public Collection<Participant> getParticipants() {
         return participants;
+    }
+
+    public int getParticipantCount() {
+        return participants == null ? 0 : participants.size();
     }
 }
